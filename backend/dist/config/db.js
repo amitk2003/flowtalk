@@ -1,0 +1,16 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const mongoose_1 = __importDefault(require("mongoose"));
+const connectDB = async (uri) => {
+    try {
+        await mongoose_1.default.connect(uri);
+        console.log("database connected");
+    }
+    catch {
+        console.error("Mongo db connection error");
+    }
+};
+exports.default = connectDB;

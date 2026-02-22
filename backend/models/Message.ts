@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from "typeorm";
 
 export type MessageStatus = "sent" | "delivered" | "read";
@@ -12,31 +13,30 @@ export class Message {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column()
-  room!: string;
+  @Index()
+  @Column("uuid")
+  roomId!: string;
 
-  @Column()
+  @Column("uuid")
   senderId!: string;
 
   @Column({ nullable: true })
-  text?: string;
+  content?: string;
 
   @Column({ nullable: true })
-  media?: string;
+  mediaUrl?: string;
 
-  // ✅ FIX: Use plain string column + enum constraint instead of TS union
   @Column({
     type: "varchar",
     default: "sent",
   })
-  status!: MessageStatus;
+  deliveryStatus!: MessageStatus;
 
-  // ✅ FIX: Proper default for Postgres UUID array
   @Column("uuid", {
     array: true,
     default: () => "ARRAY[]::uuid[]",
   })
-  readBy!: string[];
+  readByUserIds!: string[];
 
   @CreateDateColumn()
   createdAt!: Date;

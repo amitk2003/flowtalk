@@ -1,0 +1,71 @@
+{
+  "name":"amitmmm",
+  "email":"ami123=0@gmail.com",
+  "password":"123A56w"
+}
+tokendata
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjMDI4OTQzLTZmNmQtNDZjNy1iYmQ4LWFmNGUxZDE5MmNiYyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzcwODE1MjUyLCJleHAiOjE3NzA4MTYxNTJ9.g3CWWB4iqqll1jurgXHYViPb5xrG-ROrO9tRxDE56KQ",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjMDI4OTQzLTZmNmQtNDZjNy1iYmQ4LWFmNGUxZDE5MmNiYyIsImlhdCI6MTc3MDgxNTI1MiwiZXhwIjoxNzcxNDIwMDUyfQ.MQM4POvtP4m16PeGLE-5OxNKXHjgCS4mXaYA2a1yq00"
+}
+
+
+// updated data after implementing refreshtoken t make it more secure
+{
+  "name":"abcdef",
+  "email":"abcdef@gmai.com",
+  "password":"Ambrt@2345"
+}
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNzBjNjIyLWE4OTItNDAxYy05MGJmLWFkMTYzMWM3M2ExYyIsInJvbGUiOiJ1c2VyIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc3MTc1MTIxNywiZXhwIjoxNzcxNzUyMTE3fQ.wep20zQ_7xLFQ_q_68M3PzuJMJM2LlZcAIB7FwOP_3U",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNzBjNjIyLWE4OTItNDAxYy05MGJmLWFkMTYzMWM3M2ExYyIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzcxNzUxMjE3LCJleHAiOjE3NzIzNTYwMTd9.5rAS6uHEMTjRSm7NqnQn2iqPDmncvToJhFch6rECYYY",
+  "user": {
+    "id": "dc70c622-a892-401c-90bf-ad1631c73a1c",
+    "name": "abcdef",
+    "email": "abcdef@gmai.com"
+  }
+}
+
+
+// to test logout use   your refresh token and passed in body
+then in headers pass  Authorisation: Bearer  youraccesstoken
+ once you select for post then your refreshtoken will be deleted
+
+
+ other user id
+ {
+  "name":"buffrgt",
+  "email":"docker@gmai.com",
+  "password":"fucj@2378"
+}
+
+
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg0NmVlZDE4LThhMGItNGVlNS05MDYxLWEzN2E4ZDY3ZjBjMSIsInJvbGUiOiJ1c2VyIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc3MTc1NzM1MCwiZXhwIjoxNzcxNzU4MjUwfQ.pkeTM7Hdyww7SAsJ_XW4FmmlhOGiHrzSskO5JoqVDxs",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg0NmVlZDE4LThhMGItNGVlNS05MDYxLWEzN2E4ZDY3ZjBjMSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzcxNzU3MzUwLCJleHAiOjE3NzIzNjIxNTB9.xlosOfzsRXY79UU6PPWZe0NI_dKDGEVJxc-lLGonPSs",
+  "user": {
+    "id": "846eed18-8a0b-4ee5-9061-a37a8d67f0c1",
+    "name": "buffrgt",
+    "email": "docker@gmai.com"
+  }
+}
+
+
+i tested : ttp://localhost:5000/api/rooms/private
+my request.body: {
+  "otherUserId":"dc70c622-a892-401c-90bf-ad1631c73a1c"
+}
+
+this is  response:\
+{
+  "isPrivate": true,
+  "members": [
+    "846eed18-8a0b-4ee5-9061-a37a8d67f0c1",
+    "dc70c622-a892-401c-90bf-ad1631c73a1c"
+  ],
+  "name": null,
+  "lastMessagePreview": null,
+  "lastMessageAt": null,
+  "id": "7245ed38-980a-46d0-aa13-21cf3641546e",
+  "createdAt": "2026-02-22T05:34:00.865Z"
+}

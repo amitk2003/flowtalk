@@ -6,21 +6,27 @@ dotenv.config();
 
 export const AppDataSource = new DataSource({
   type: "postgres",
-  host: process.env.PG_HOST || "localhost",
-  port: Number(process.env.PG_PORT) || 5432,
-  username: process.env.PG_USER || "postgres",
-  password: process.env.PG_PASSWORD || "postgres",
-  database: process.env.PG_DB || "chat_app",
-  synchronize: true,   // auto-create tables (use false in production)
+
+  // 👇 Neon connection (THIS is the key change)
+  url: process.env.Database_URL,
+
+  // 👇 Neon requires SSL
+  ssl: {
+    rejectUnauthorized: false,
+  },
+
+  synchronize: true, // dev only (disable in prod)
   logging: false,
-  entities: ["src/models/*.ts"],
+
+  // 👇 safer entity path for TS + compiled JS
+  entities: [__dirname + "/../models/*.{ts,js}"],  // folder location for models
 });
 
 export const connectDB = async () => {
   try {
     await AppDataSource.initialize();
-    console.log("✅ PostgreSQL connected");
+    console.log("✅ Connected to Neon PostgreSQL");
   } catch (err) {
-    console.error("PostgreSQL connection error:", err);
+    console.error("❌ PostgreSQL connection error:", err);
   }
 };

@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
-
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn ,OneToMany } from "typeorm";
+import { RefreshToken } from "./RefreshToken";
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
@@ -13,6 +13,8 @@ export class User {
 
   @Column()
   passwordHash!: string;
+  @Column({default:"user"})
+  role!:"user" | "admin"
 
   @Column({ nullable: true })
   avatar?: string;
@@ -22,7 +24,9 @@ export class User {
 
   @Column({ default: false })
   isOnline!: boolean;
-
+  
+  @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
+refreshTokens!: RefreshToken[];
   @CreateDateColumn()
   createdAt!: Date;
 

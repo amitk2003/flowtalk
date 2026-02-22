@@ -1,16 +1,26 @@
 import express, { Request, Response } from "express";
-import auth, { AuthRequest } from "../middleware/auth";
+import { AuthRequest,auth } from "../middleware/auth";
 import { AppDataSource } from "../config/pg";
 import { Message } from "../models/Message";
-
+import { Room } from "../models/Room";
 const router = express.Router();
 
-router.get("/:room", auth, async (req: AuthRequest, res: Response) => {
+router.get("/:roomId", auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { room } = req.params;
+    const { roomId } = req.params;
+    const userId = req.user!.id;
 
-    const messages = await AppDataSource.getRepository(Message).find({
-      where: { room },
+    const roomRepo = AppDataSource.getRepository(Room);
+    const messageRepo = AppDataSource.getRepository(Message);
+
+    const room = await roomRepo.findOne({ where: { id: roomId } });
+
+    if (!room || !room.members.includes(userId)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const messages = await messageRepo.find({
+      where: { roomId },
       order: { createdAt: "ASC" },
       take: 100,
     });

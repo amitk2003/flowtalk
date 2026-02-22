@@ -1,22 +1,23 @@
 import express, { Response } from "express";
-import auth, { AuthRequest } from "../middleware/auth";
+import { auth,AuthRequest } from "../middleware/auth";
 import { AppDataSource } from "../config/pg";
 import { Room } from "../models/Room";
 import { In, Raw } from "typeorm";
+import { User } from  "../models/User"
 
 const router = express.Router();
-
+const userRepo=AppDataSource.getRepository(User)
+const roomRepo=AppDataSource.getRepository(Room)
 router.get("/my-rooms", auth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
-    const roomRepo = AppDataSource.getRepository(Room);
 
     const rooms = await roomRepo.find({
       where: {
         members: Raw((alias) => `:userId = ANY(${alias})`, { userId }),
       },
-      order: { lastMessageAt: "DESC" },
+      order: { lastMessageAt: "DESC", createdAt:"DESC" },
     });
 
     res.json(rooms);
@@ -27,18 +28,27 @@ router.get("/my-rooms", auth, async (req: AuthRequest, res: Response) => {
 });
 
 router.post("/private", auth, async (req: AuthRequest, res: Response) => {
-  const { otherUserId } = req.body;
+  try{
+      const { otherUserId } = req.body;
   const userId = req.user!.id;
-
-  const roomRepo = AppDataSource.getRepository(Room);
+  if(!otherUserId) return res.status(400).json({message:"otheruser id is required"})
+  if (otherUserId === userId) {
+  return res.status(400).json({ message: "Cannot create private room with yourself" });
+}  
+// if other usr exist
+const otherUser = await userRepo.findOne({where:{id:otherUserId}})
+if(!otherUser) return res.status(404).json({message:"Other user not found"})
 
   // Find existing private room containing BOTH users
   let room = await roomRepo.findOne({
     where: {
       isPrivate: true,
       members: Raw(
-        (alias) => `:u1 = ANY(${alias}) AND :u2 = ANY(${alias})`,
-        { u1: userId, u2: otherUserId }
+        (alias)=> `array_length(${alias},1)=2 AND :u1 = ANY(${alias})
+        AND :u2=ANY(${alias})
+        `,
+         {u1:userId,u2:otherUserId}
+        //  room is private, contain both users, has exactly 2 memebers
       ),
     },
   });
@@ -53,6 +63,12 @@ router.post("/private", auth, async (req: AuthRequest, res: Response) => {
   }
 
   res.json(room);
+  }catch(err){
+    console.error("Private room error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+
+  
 });
 
 export default router;

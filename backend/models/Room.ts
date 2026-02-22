@@ -15,7 +15,7 @@ export class Room {
   members!: string[];
 
   @Column({ nullable: true })
-  lastMessage?: string;
+  lastMessagePreview?: string;
 
   @Column({ nullable: true })
   lastMessageAt?: Date;

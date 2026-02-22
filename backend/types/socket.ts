@@ -1,27 +1,62 @@
-import { Socket } from 'socket.io';
+import { Socket } from "socket.io";
 
 export interface ServerToClientEvents {
-  'message:new': (msg: any) => void;
-  'presence:update': (data: { userId: string; status: string }) => void;
-  'call:incoming': (payload: any) => void;
-  'webrtc:offer': (payload: { sdp: RTCSessionDescriptionInit }) => void;
-  'webrtc:answer': (payload: { sdp: RTCSessionDescriptionInit }) => void;
-  'webrtc:icecandidate': (payload: { candidate: RTCIceCandidateInit }) => void;
-  "ai:stream": (data: { room: string; text: string }) => void;
-  "ai:complete": (data: { room: string; text: string }) => void;
+  "message:new": (msg: {
+    id: string;
+    roomId: string;
+    senderId: string;
+    content?: string;
+    mediaUrl?: string;
+    createdAt: Date;
+  }) => void;
+
+  "presence:update": (data: {
+    userId: string;
+    status: "online" | "offline";
+  }) => void;
+
+  "call:incoming": (payload: {
+    fromUserId: string;
+  }) => void;
+
+  "webrtc:offer": (payload: {
+    sdp: RTCSessionDescriptionInit;
+  }) => void;
+
+  "webrtc:answer": (payload: {
+    sdp: RTCSessionDescriptionInit;
+  }) => void;
+
+  "webrtc:icecandidate": (payload: {
+    candidate: RTCIceCandidateInit;
+  }) => void;
+
+  "ai:stream": (data: { roomId: string; text: string }) => void;
+
+  "ai:complete": (data: { roomId: string; text: string }) => void;
 }
-
-
-// export interface ClientToServerEvents {
-//   "ai:ask": (data: { room: string; userId: string; prompt: string }) => void;
-// }
-
 
 export interface ClientToServerEvents {
-  'user:online': (data: { userId: string }) => void;
-  'message:send': (data: { room: string; senderId: string; text: string }) => void;
-  'webrtc:offer': (data: { toUserId: string; sdp: RTCSessionDescriptionInit }) => void;
-  "ai:ask": (data: { room: string; userId: string; prompt: string }) => void;
+  "user:online": () => void;
+
+  "message:send": (data: {
+    roomId: string;
+    text?: string;
+    mediaUrl?: string;
+  }) => void;
+
+  "webrtc:offer": (data: {
+    toUserId: string;
+    sdp: RTCSessionDescriptionInit;
+  }) => void;
+
+  "ai:ask": (data: {
+    roomId: string;
+    prompt: string;
+  }) => void;
 }
 
-export type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+export type TypedSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents
+>;

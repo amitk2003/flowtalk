@@ -19,35 +19,36 @@ __decorate([
     __metadata("design:type", String)
 ], Message.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)("uuid"),
     __metadata("design:type", String)
-], Message.prototype, "room", void 0);
+], Message.prototype, "roomId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)("uuid"),
     __metadata("design:type", String)
 ], Message.prototype, "senderId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
-], Message.prototype, "text", void 0);
+], Message.prototype, "content", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
-], Message.prototype, "media", void 0);
+], Message.prototype, "mediaUrl", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: "varchar",
         default: "sent",
     }),
     __metadata("design:type", String)
-], Message.prototype, "status", void 0);
+], Message.prototype, "deliveryStatus", void 0);
 __decorate([
     (0, typeorm_1.Column)("uuid", {
         array: true,
         default: () => "ARRAY[]::uuid[]",
     }),
     __metadata("design:type", Array)
-], Message.prototype, "readBy", void 0);
+], Message.prototype, "readByUserIds", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

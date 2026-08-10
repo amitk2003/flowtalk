@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const cors_1 = __importDefault(require("cors"));
@@ -14,15 +15,16 @@ const Message_1 = require("./models/Message");
 const Room_1 = require("./models/Room");
 const auth_1 = __importDefault(require("./routes/auth"));
 const messages_1 = __importDefault(require("./routes/messages"));
+const room_1 = __importDefault(require("./routes/room"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const axios_1 = __importDefault(require("axios"));
-dotenv_1.default.config();
 // const openai = new Grok({ apiKey: process.env.XAI_API_KEY });
 const GROK_API_URL = "https://api.x.ai/v1/chat/completions";
 const app = (0, express_1.default)();
-const server = http_1.default.createServer(app);
+const server = http_1.default.createServer(app); // create server for application
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || "*",
+        origin: "*",
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     },
 });
@@ -34,15 +36,31 @@ app.use(express_1.default.json());
 // Routes
 app.use("/api/auth", auth_1.default);
 app.use("/api/messages", messages_1.default);
+app.use("/api/rooms", room_1.default);
 // Online users map: userId -> Set<socketId>
 const onlineUsers = new Map();
+// socket authentication middle waree
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token)
+        return next(new Error("Unauthorized"));
+    try {
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        socket.user = decoded;
+        next();
+    }
+    catch {
+        next(new Error("Unauthorized"));
+    }
+});
 io.on("connection", (socket) => {
     console.log(`🟢 Socket connected: ${socket.id}`);
     const userRepo = pg_1.AppDataSource.getRepository(User_1.User);
     const msgRepo = pg_1.AppDataSource.getRepository(Message_1.Message);
     const roomRepo = pg_1.AppDataSource.getRepository(Room_1.Room);
     // --------- PRESENCE: USER ONLINE ---------
-    socket.on("user:online", async ({ userId }) => {
+    socket.on("user:online", async () => {
+        const userId = socket.user.id;
         const sockets = onlineUsers.get(userId) || new Set();
         sockets.add(socket.id);
         onlineUsers.set(userId, sockets);
@@ -57,21 +75,27 @@ io.on("connection", (socket) => {
         socket.leave(room);
     });
     // --------- SEND MESSAGE (WHATSAPP STYLE) ---------
-    socket.on("message:send", async ({ room, senderId, text, media, }) => {
+    // receiive message from user- saves in databse-updates room info- broadcast to everyone in that room
+    socket.on("message:send", async ({ roomId, text, mediaUrl }) => {
+        const user = socket.user;
+        const senderId = user.id;
+        const room = await roomRepo.findOne({ where: { id: roomId } });
+        if (!room || !room.members.includes(senderId)) {
+            return socket.emit("error", { message: "Access denied" });
+        }
         const msg = msgRepo.create({
-            room,
+            roomId,
             senderId,
-            text,
-            media,
-            status: "sent",
+            content: text,
+            mediaUrl,
+            deliveryStatus: "sent",
         });
         await msgRepo.save(msg);
-        // Update room last message
-        await roomRepo.update(room, {
-            lastMessage: msg.id,
+        await roomRepo.update(roomId, {
+            lastMessagePreview: msg.id,
             lastMessageAt: new Date(),
         });
-        io.to(room).emit("message:new", msg);
+        io.to(roomId).emit("message:new", msg);
     });
     // --------- TYPING INDICATOR ---------
     socket.on("typing", ({ room, userId }) => {
@@ -79,10 +103,10 @@ io.on("connection", (socket) => {
     });
     // --------- MESSAGE STATUS: DELIVERED ---------
     socket.on("message:delivered", async ({ messageId }) => {
-        await msgRepo.update(messageId, { status: "delivered" });
+        await msgRepo.update(messageId, { deliveryStatus: "delivered" });
         io.emit("message:status:update", {
             messageId,
-            status: "delivered",
+            deliveryStatus: "delivered",
         });
     });
     // --------- MESSAGE STATUS: READ (BLUE TICK) ---------
@@ -90,14 +114,14 @@ io.on("connection", (socket) => {
         const msg = await msgRepo.findOneBy({ id: messageId });
         if (!msg)
             return;
-        const updatedReadBy = Array.from(new Set([...(msg.readBy || []), userId]));
+        const updatedReadBy = Array.from(new Set([...(msg.readByUserIds || []), userId]));
         await msgRepo.update(messageId, {
-            status: "read",
-            readBy: updatedReadBy,
+            deliveryStatus: "read",
+            readByUserIds: updatedReadBy,
         });
         io.emit("message:status:update", {
             messageId,
-            status: "read",
+            deliveryStatus: "read",
         });
     });
     // ========== WEBRTC VIDEO CALL SIGNALING ==========
@@ -145,8 +169,9 @@ io.on("connection", (socket) => {
         }
     });
     // --------- REAL-TIME AI LLM ---------
-    socket.on("ai:ask", async ({ room, userId, prompt, }) => {
+    socket.on("ai:ask", async ({ room, prompt, }) => {
         try {
+            const userId = socket.user.id;
             io.to(room).emit("typing", { room, userId: "AI_BOT" });
             const response = await axios_1.default.post(GROK_API_URL, {
                 model: "grok-3.5",
@@ -171,14 +196,14 @@ io.on("connection", (socket) => {
             socket.emit("ai:complete", { room, text: fullResponse });
             // Save AI message in DB like normal chat
             const aiMessage = msgRepo.create({
-                room,
+                roomId: room,
                 senderId: "AI_BOT",
-                text: fullResponse,
-                status: "sent",
+                content: fullResponse,
+                deliveryStatus: "sent",
             });
             await msgRepo.save(aiMessage);
             await roomRepo.update(room, {
-                lastMessage: aiMessage.id,
+                lastMessagePreview: aiMessage.id,
                 lastMessageAt: new Date(),
             });
             io.to(room).emit("message:new", aiMessage);

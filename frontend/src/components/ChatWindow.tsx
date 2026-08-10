@@ -1,151 +1,448 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import { useEffect, useState, useRef, useCallback } from "react";
 import { socket } from "@/lib/socket";
 import { fetchMessages } from "@/services/messageService";
+import { Room, User, Message } from "@/types";
 import ChatList from "./ChatList";
 import MessageBubble from "./MessageBubble";
 import VideoCallModal from "./VideoCallModal";
+import TypingIndicator from "./TypingIndicator";
+import AIPanel from "./AIPanel";
 
+interface ChatWindowProps {
+  user: User;
+  onLogout: () => void;
+}
 
-export default function ChatWindow({ user }: any) {
-  const [room, setRoom] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
+  const [room, setRoom] = useState<Room | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [showCall, setShowCall] = useState(false);
-const [aiInput, setAiInput] = useState("");
-const [aiResponse, setAiResponse] = useState("");
+  const [showAI, setShowAI] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [showMobileList, setShowMobileList] = useState(true);
 
-useEffect(() => {
-  socket.on("ai:stream", ({ text }) => {
-    setAiResponse((prev) => prev + text);
-  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const typingTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  socket.on("ai:complete", ({ text }) => {
-    setAiResponse(text);
-  });
-}, []);
-const askAI = () => {
-  setAiResponse(""); // clear old response
-
-  socket.emit("ai:ask", {
-    room: room._id,
-    userId: user._id,
-    prompt: aiInput,
-  });
-};
-
-
+  // ── AUTO SCROLL ─────────────────────────────────────────────────────────
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, typingUsers]);
+
+  // ── CONNECT + PRESENCE ──────────────────────────────────────────────────
+  useEffect(() => {
+    socket.auth = { token: localStorage.getItem("token") };
     socket.connect();
-    socket.emit("user:online", { userId: user._id });
+    socket.emit("user:online");
+
+    return () => { socket.disconnect(); };
   }, []);
 
+  // ── ROOM CHANGE ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!room) return;
+    setMessages([]);
+    setTypingUsers(new Set());
 
-    socket.emit("joinRoom", { room: room._id });
+    socket.emit("joinRoom", { room: room.id });
 
-    fetchMessages(room._id).then((res) => setMessages(res.data));
+    fetchMessages(room.id)
+      .then((res) => {
+        const data = res.data.data || res.data;
+        setMessages(Array.isArray(data) ? data : []);
+      })
+      .catch(console.error);
 
-    socket.on("message:new", (msg) => {
-      setMessages((prev) => [...prev, msg]);
+    const handleNewMessage = (msg: Message) => {
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+      socket.emit("message:delivered", { messageId: msg.id });
+    };
 
-      // Mark delivered
-      socket.emit("message:delivered", { messageId: msg._id });
-    });
+    const handleTyping = ({ userId }: { room: string; userId: string }) => {
+      if (userId === user.id) return;
+      setTypingUsers((prev) => new Set([...prev, userId]));
+
+      // Clear typing after 2.5s of no updates
+      const existing = typingTimersRef.current.get(userId);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => {
+        setTypingUsers((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+        typingTimersRef.current.delete(userId);
+      }, 2500);
+      typingTimersRef.current.set(userId, timer);
+    };
+
+    const handleStatusUpdate = ({ messageId, deliveryStatus }: any) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, deliveryStatus } : m))
+      );
+    };
+
+    socket.on("message:new" as any, handleNewMessage);
+    socket.on("typing" as any, handleTyping);
+    socket.on("message:status:update" as any, handleStatusUpdate);
 
     return () => {
-      socket.emit("leaveRoom", { room: room._id });
+      socket.emit("leaveRoom", { room: room.id });
+      socket.off("message:new" as any, handleNewMessage);
+      socket.off("typing" as any, handleTyping);
+      socket.off("message:status:update" as any, handleStatusUpdate);
     };
-  }, [room]);
+  }, [room, user.id]);
 
-  const sendMessage = () => {
-    if (!text.trim()) return;
-    socket.emit("message:send", {
-      room: room._id,
-      senderId: user._id,
-      text,
-    });
-    setText("");
+  // ── TYPING EMIT ─────────────────────────────────────────────────────────
+  const typingEmitRef = useRef<NodeJS.Timeout | null>(null);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value);
+    if (!room) return;
+    if (!typingEmitRef.current) {
+      socket.emit("typing" as any, { room: room.id, userId: user.id });
+    }
+    if (typingEmitRef.current) clearTimeout(typingEmitRef.current);
+    typingEmitRef.current = setTimeout(() => { typingEmitRef.current = null; }, 2000);
   };
 
-  return (
-    <div className="flex h-screen">
-      <ChatList onSelectRoom={setRoom} />
+  // ── SEND MESSAGE ────────────────────────────────────────────────────────
+  const sendMessage = useCallback(() => {
+    if (!text.trim() || !room) return;
+    socket.emit("message:send", { roomId: room.id, text: text.trim() });
+    setText("");
+    inputRef.current?.focus();
+  }, [text, room]);
 
-      <div className="w-2/3 flex flex-col">
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // ── SELECT ROOM ─────────────────────────────────────────────────────────
+  const handleSelectRoom = (r: Room) => {
+    setRoom(r);
+    setShowMobileList(false); // On mobile, hide the list when a room is selected
+  };
+
+  const getRoomDisplayName = () => {
+    if (!room) return "";
+    if (room.isPrivate) return room.otherUser?.name || "Private Chat";
+    return room.name || "Group Chat";
+  };
+
+  const otherUserId = room?.members?.find((m) => m !== user.id);
+
+  // ── RENDER ───────────────────────────────────────────────────────────────
+  return (
+    <div className="app-shell">
+      {/* ── SIDEBAR (Chat List) ── */}
+      <div
+        style={{
+          flexShrink: 0,
+          // Mobile: show/hide based on state
+          display: "flex",
+        }}
+        className="sidebar-wrapper"
+      >
+        <ChatList
+          currentUser={user}
+          selectedRoom={room}
+          onSelectRoom={handleSelectRoom}
+          onLogout={onLogout}
+        />
+      </div>
+
+      {/* ── MAIN CHAT AREA ── */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          minWidth: 0,
+          background: "var(--color-bg)",
+          backgroundImage: "radial-gradient(ellipse at 80% 20%, rgba(108,99,255,0.04) 0%, transparent 50%)",
+        }}
+      >
         {room ? (
           <>
-            <div className="bg-blue-600 text-white p-4 flex justify-between">
-              <span>Chat Room</span>
+            {/* Chat header */}
+            <div
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--color-border)",
+                background: "var(--color-surface)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexShrink: 0,
+              }}
+            >
+              {/* Mobile back button */}
               <button
-                className="bg-green-500 px-3 py-1 rounded"
-                onClick={() => setShowCall(true)}
+                id="mobile-back-btn"
+                className="btn-icon"
+                onClick={() => setShowMobileList(true)}
+                style={{ display: "none" }}
+                title="Back to chats"
               >
-                📞 Video Call
+                ←
               </button>
+
+              {/* Room avatar */}
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: room.isPrivate
+                    ? "linear-gradient(135deg, var(--color-primary), var(--color-accent))"
+                    : "linear-gradient(135deg, var(--color-success), #06b6d4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: "white",
+                  flexShrink: 0,
+                }}
+              >
+                {room.isPrivate ? getRoomDisplayName()[0]?.toUpperCase() : "👥"}
+              </div>
+
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <p style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--color-text)" }}>
+                  {getRoomDisplayName()}
+                </p>
+                <p style={{ fontSize: 11, color: "var(--color-text-3)" }}>
+                  {typingUsers.size > 0 ? (
+                    <span style={{ color: "var(--color-primary)" }}>typing...</span>
+                  ) : (
+                    `${room.members?.length || 0} members`
+                  )}
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <button
+                  id="ai-toggle-btn"
+                  className="btn-icon"
+                  onClick={() => setShowAI(!showAI)}
+                  title="FlowBot AI"
+                  style={{
+                    fontSize: 18,
+                    background: showAI ? "rgba(168,85,247,0.15)" : "transparent",
+                    color: showAI ? "var(--color-ai)" : "var(--color-text-2)",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  🤖
+                </button>
+                {room.isPrivate && otherUserId && (
+                  <button
+                    id="video-call-btn"
+                    className="btn-icon"
+                    onClick={() => setShowCall(true)}
+                    title="Video Call"
+                    style={{ fontSize: 18 }}
+                  >
+                    📞
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto">
+            {/* Messages */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "20px 20px 10px",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {messages.length === 0 && (
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--color-text-3)",
+                    textAlign: "center",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 48, opacity: 0.4 }}>💬</div>
+                  <p style={{ fontSize: 14, color: "var(--color-text-2)" }}>No messages yet</p>
+                  <p style={{ fontSize: 12 }}>Send the first message to get the conversation going!</p>
+                </div>
+              )}
+
               {messages.map((m) => (
                 <MessageBubble
-                  key={m._id}
+                  key={m.id}
                   msg={m}
-                  isMe={m.senderId === user._id}
+                  isMe={m.senderId === user.id}
+                  isBot={m.senderId === "AI_BOT"}
                 />
               ))}
+
+              {/* Typing indicators */}
+              {Array.from(typingUsers).map((uid) => (
+                <TypingIndicator key={uid} userId={uid} />
+              ))}
+
+              <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 bg-white flex">
+            {/* Message input */}
+            <div
+              style={{
+                padding: "12px 20px",
+                borderTop: "1px solid var(--color-border)",
+                background: "var(--color-surface)",
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
               <input
-                className="flex-1 border p-2"
+                ref={inputRef}
+                id="message-input"
+                className="input"
+                type="text"
+                placeholder={`Message ${getRoomDisplayName()}...`}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                style={{ fontSize: 14 }}
               />
               <button
-                className="ml-2 bg-blue-500 text-white px-4"
+                id="send-message-btn"
+                className="btn btn-primary"
                 onClick={sendMessage}
+                disabled={!text.trim()}
+                style={{ padding: "9px 18px", flexShrink: 0 }}
               >
-                Send
+                <span>Send</span>
+                <span>↑</span>
               </button>
             </div>
-
-            {showCall && (
-              <VideoCallModal
-                room={room}
-                user={user}
-                onClose={() => setShowCall(false)}
-              />
-            )}
           </>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            Select a chat to start messaging
+          /* Empty state */
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-3)",
+              textAlign: "center",
+              padding: 40,
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,229,255,0.1))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 36,
+                marginBottom: 8,
+              }}
+            >
+              💬
+            </div>
+            <div>
+              <h2
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  marginBottom: 8,
+                }}
+              >
+                Welcome to FlowTalk
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--color-text-2)", maxWidth: 280 }}>
+                Select a conversation or start a new one using the ✏️ button
+              </p>
+            </div>
           </div>
         )}
       </div>
-      <div className="w-1/3 border-l p-4 bg-gray-50">
-  <h3 className="font-bold mb-2">AI Assistant (Real-Time)</h3>
 
-  <textarea
-    className="w-full border p-2 rounded"
-    placeholder="Ask AI anything..."
-    value={aiInput}
-    onChange={(e) => setAiInput(e.target.value)}
-  />
+      {/* ── AI PANEL ── */}
+      {showAI && (
+        <div
+          style={{
+            width: "var(--ai-panel-width)",
+            minWidth: "var(--ai-panel-width)",
+            height: "100dvh",
+            flexShrink: 0,
+          }}
+        >
+          <AIPanel roomId={room?.id || null} onClose={() => setShowAI(false)} />
+        </div>
+      )}
 
-  <button
-    className="bg-purple-600 text-white px-3 py-1 mt-2 rounded"
-    onClick={askAI}
-  >
-    Ask AI
-  </button>
+      {/* ── VIDEO CALL ── */}
+      {showCall && room && otherUserId && (
+        <VideoCallModal
+          room={room}
+          user={user}
+          otherUserId={otherUserId}
+          onClose={() => setShowCall(false)}
+        />
+      )}
 
-  <div className="mt-3 p-2 bg-white border rounded min-h-[120px]">
-    <p className="whitespace-pre-wrap">{aiResponse || "AI response will appear here..."}</p>
-  </div>
-</div>
-
-
+      {/* Mobile responsive styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          .sidebar-wrapper {
+            position: fixed !important;
+            left: ${showMobileList ? "0" : "-100%"} !important;
+            top: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            z-index: 50 !important;
+            transition: left 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+          }
+          .sidebar-wrapper > div {
+            width: 100% !important;
+            min-width: 100% !important;
+          }
+          #mobile-back-btn {
+            display: flex !important;
+          }
+        }
+        @media (max-width: 1024px) {
+          :root {
+            --ai-panel-width: 260px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

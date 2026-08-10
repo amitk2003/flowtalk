@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
+const RefreshToken_1 = require("./RefreshToken");
 let User = class User {
 };
 exports.User = User;
@@ -46,6 +47,10 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], User.prototype, "isOnline", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => RefreshToken_1.RefreshToken, (refreshToken) => refreshToken.user),
+    __metadata("design:type", Array)
+], User.prototype, "refreshTokens", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

@@ -19,7 +19,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     synchronize: true, // dev only (disable in prod)
     logging: false,
     // 👇 safer entity path for TS + compiled JS
-    entities: [__dirname + "/../models/*.{ts,js}"],
+    entities: [__dirname + "/../models/*.{ts,js}"], // folder location for models
 });
 const connectDB = async () => {
     try {

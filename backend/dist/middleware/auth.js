@@ -18,7 +18,7 @@ const auth = async (req, res, next) => {
     if (blacklisted)
         return res.status(401).json({ message: "Token blacklisted" });
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET);
         const user = await userRepo.findOne({ where: { id: decoded.id } });
         if (!user)
             return res.status(401).json({ message: "User not found" });
@@ -30,3 +30,4 @@ const auth = async (req, res, next) => {
     }
 };
 exports.auth = auth;
+console.log("ACCESS_SECRET:", process.env.ACCESS_TOKEN_SECRET);

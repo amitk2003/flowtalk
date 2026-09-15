@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { searchUsers } from "@/services/userService";
 import { createPrivateRoom } from "@/services/roomService";
 import { User, Room } from "@/types";
+import { Search, X, UserPlus, Loader2 } from "lucide-react";
 
 interface UserSearchProps {
   onRoomSelect: (room: Room) => void;
@@ -56,228 +57,102 @@ export default function UserSearch({ onRoomSelect, onClose }: UserSearchProps) {
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        backdropFilter: "blur(8px)",
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        animation: "fadeIn 0.2s ease",
-      }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-xl)",
-          overflow: "hidden",
-          boxShadow: "var(--shadow-lg)",
-          animation: "scaleIn 0.25s cubic-bezier(0.4,0,0.2,1)",
-        }}
-      >
+      <div className="w-full max-w-[420px] bg-[#111b21] border border-[#222d34] rounded-xl overflow-hidden shadow-2xl animate-bubble">
+        
         {/* Header */}
-        <div
-          style={{
-            padding: "20px 24px 16px",
-            borderBottom: "1px solid var(--color-border)",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 17,
-                fontWeight: 600,
-                color: "var(--color-text)",
-                marginBottom: 2,
-              }}
-            >
+        <div className="px-5 py-4 border-b border-[#222d34] flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-base text-[#e9edef] tracking-wide">
               New Chat
             </h3>
-            <p style={{ color: "var(--color-text-3)", fontSize: 12 }}>
-              Search for a user to start messaging
+            <p className="text-xs text-[#8696a0] mt-0.5">
+              Find contacts by name or email
             </p>
           </div>
-          <button id="user-search-close" className="btn-icon" onClick={onClose}>
-            ✕
+          <button 
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-[#2d3f4b] text-[#aebac1] transition-all"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Search Input */}
-        <div style={{ padding: "16px 24px" }}>
-          <div style={{ position: "relative" }}>
-            <span
-              style={{
-                position: "absolute",
-                left: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "var(--color-text-3)",
-                fontSize: 16,
-                pointerEvents: "none",
-              }}
-            >
-              🔍
-            </span>
+        {/* Input area */}
+        <div className="p-4">
+          <div className="relative flex items-center bg-[#202d33] rounded-lg px-3 py-2 border border-[#222d34] focus-within:border-[#00a884] transition-all">
+            <Search className="w-4 h-4 text-[#8696a0] mr-2.5 shrink-0" />
             <input
               ref={inputRef}
-              id="user-search-input"
-              className="input"
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search name or email"
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ paddingLeft: 40 }}
+              className="w-full bg-transparent text-sm text-[#e9edef] outline-none placeholder-[#8696a0]"
             />
           </div>
         </div>
 
-        {/* Results */}
-        <div style={{ maxHeight: 360, overflowY: "auto", padding: "0 12px 12px" }}>
+        {/* Results List */}
+        <div className="max-h-[300px] overflow-y-auto px-2 pb-3">
           {loading && (
-            <div style={{ padding: "20px", textAlign: "center" }}>
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "10px 12px",
-                    marginBottom: 4,
-                  }}
-                >
-                  <div className="skeleton" style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div className="skeleton" style={{ width: "60%", height: 14, marginBottom: 6 }} />
-                    <div className="skeleton" style={{ width: "80%", height: 11 }} />
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <Loader2 className="w-8 h-8 text-[#00a884] animate-spin" />
+              <span className="text-xs text-[#8696a0]">Searching contacts...</span>
             </div>
           )}
 
           {!loading && query && results.length === 0 && (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "32px 20px",
-                color: "var(--color-text-3)",
-              }}
-            >
-              <div style={{ fontSize: 36, marginBottom: 8 }}>🔍</div>
-              <p style={{ fontSize: 14 }}>No users found for "{query}"</p>
+            <div className="text-center py-10 text-[#8696a0]">
+              <p className="text-sm">No contacts found for "{query}"</p>
             </div>
           )}
 
           {!loading && !query && (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "32px 20px",
-                color: "var(--color-text-3)",
-              }}
-            >
-              <div style={{ fontSize: 36, marginBottom: 8 }}>👥</div>
-              <p style={{ fontSize: 13 }}>Start typing to search users</p>
+            <div className="text-center py-10 text-[#8696a0] flex flex-col items-center justify-center gap-2 select-none">
+              <UserPlus className="w-10 h-10 text-[#667781] stroke-[1.2]" />
+              <p className="text-xs">Type a name or email address above</p>
             </div>
           )}
 
-          {results.map((user) => (
-            <button
-              key={user.id}
-              id={`user-result-${user.id}`}
-              onClick={() => handleStartChat(user)}
-              disabled={creating === user.id}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 12px",
-                background: "transparent",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "var(--transition)",
-                color: "var(--color-text)",
-                marginBottom: 2,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          {!loading && results.map((contact) => (
+            <div
+              key={contact.id}
+              onClick={() => handleStartChat(contact)}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer hover:bg-[#202d33] transition-all group border-b border-[#222d34]/20"
             >
-              {/* Avatar */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: "white",
-                  }}
-                >
-                  {user.name[0].toUpperCase()}
+              <div className="relative shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#005c4b] to-[#00a884] flex items-center justify-center font-semibold text-white uppercase">
+                  {contact.name[0]}
                 </div>
-                {/* Online dot */}
-                {user.isOnline && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 1,
-                      right: 1,
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: "var(--color-online)",
-                      border: "2px solid var(--color-surface)",
-                    }}
-                  />
+                {contact.isOnline && (
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#00a884] border border-[#111b21] rounded-full" />
                 )}
               </div>
-
-              <div style={{ flex: 1, overflow: "hidden" }}>
-                <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {user.name}
-                </p>
-                <p style={{ color: "var(--color-text-3)", fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {user.email}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-[#e9edef] truncate">
+                  {contact.name}
+                </h4>
+                <p className="text-xs text-[#8696a0] truncate mt-0.5">
+                  {contact.email}
                 </p>
               </div>
-
-              {creating === user.id ? (
-                <div style={{
-                  width: 18, height: 18, borderRadius: "50%",
-                  border: "2px solid var(--color-border)",
-                  borderTopColor: "var(--color-primary)",
-                  animation: "spin 0.7s linear infinite",
-                  flexShrink: 0,
-                }} />
+              
+              {creating === contact.id ? (
+                <Loader2 className="w-4 h-4 text-[#00a884] animate-spin" />
               ) : (
-                <span style={{ color: "var(--color-primary)", fontSize: 18, flexShrink: 0 }}>💬</span>
+                <span className="text-[11px] text-[#00a884] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                  Chat
+                </span>
               )}
-            </button>
+            </div>
           ))}
         </div>
-      </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </div>
   );
 }

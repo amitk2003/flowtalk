@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { socket } from "@/lib/socket";
 import { AIMessage } from "@/types";
+import { Sparkles, X, Send, Bot, Loader2 } from "lucide-react";
 
 interface AIPanelProps {
   roomId: string | null;
@@ -14,7 +15,7 @@ export default function AIPanel({ roomId, onClose }: AIPanelProps) {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleComplete = ({ text }: { text: string; room: string }) => {
@@ -47,7 +48,6 @@ export default function AIPanel({ roomId, onClose }: AIPanelProps) {
     setLoading(true);
     socket.emit("ai:ask", { room: roomId, prompt: input.trim() });
     setInput("");
-    textareaRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -58,148 +58,57 @@ export default function AIPanel({ roomId, onClose }: AIPanelProps) {
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-surface)",
-        borderLeft: "1px solid var(--color-border)",
-        animation: "slideInRight 0.25s cubic-bezier(0.4,0,0.2,1)",
-      }}
-    >
+    <div className="h-full flex flex-col bg-[#111b21] border-l border-[#222d34] select-none">
+      
       {/* Header */}
-      <div
-        style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          background: "linear-gradient(135deg, rgba(168,85,247,0.05), rgba(108,99,255,0.05))",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "var(--radius-md)",
-            background: "linear-gradient(135deg, var(--color-ai), var(--color-ai-dark))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            boxShadow: "var(--shadow-ai)",
-          }}
-        >
-          🤖
-        </div>
-        <div style={{ flex: 1 }}>
-          <p
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 600,
-              fontSize: 14,
-              background: "linear-gradient(135deg, var(--color-ai), #ec4899)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            FlowBot AI
-          </p>
-          <p style={{ fontSize: 11, color: "var(--color-text-3)" }}>
-            Powered by Groq · llama-3.3-70b
-          </p>
+      <div className="h-[60px] px-4 flex items-center justify-between bg-[#202d33] border-b border-[#222d34] shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-purple-400 leading-tight flex items-center gap-1">
+              FlowBot AI <Sparkles className="w-3.5 h-3.5" />
+            </h3>
+            <p className="text-[10px] text-[#8696a0]">llama-3.3-70b via Groq</p>
+          </div>
         </div>
         <button
-          id="ai-panel-close"
-          className="btn-icon"
           onClick={onClose}
-          title="Close AI panel"
+          className="p-1.5 rounded-full hover:bg-[#2d3f4b] text-[#aebac1] transition-all"
+          title="Close AI Panel"
         >
-          ✕
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Messages area */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && !loading && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              textAlign: "center",
-              color: "var(--color-text-3)",
-              gap: 12,
-            }}
-          >
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--color-ai), var(--color-ai-dark))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 28,
-                boxShadow: "var(--shadow-ai)",
-                opacity: 0.7,
-              }}
-            >
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 gap-4 text-[#8696a0]">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-700 to-indigo-600 flex items-center justify-center text-2xl shadow-lg opacity-85">
               🤖
             </div>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-2)", marginBottom: 4 }}>
-                Ask FlowBot anything
+              <p className="text-sm font-semibold text-[#e9edef] mb-1">
+                Ask FlowBot Assistant
               </p>
-              <p style={{ fontSize: 12 }}>
-                Summarize chats, draft messages,
-                <br />
-                explain concepts, and more
+              <p className="text-xs max-w-[200px] leading-relaxed mx-auto">
+                FlowBot can summarize your conversation history, help you draft responses, or answer standard queries.
               </p>
             </div>
-            {/* Suggestion chips */}
+            
             {roomId && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", marginTop: 4 }}>
-                {["Summarize this conversation", "Help me draft a reply", "Explain a technical concept"].map((s) => (
+              <div className="w-full flex flex-col gap-2 mt-2">
+                {[
+                  "Summarize this conversation",
+                  "Help me draft a friendly reply",
+                  "What is a standard HTTP protocol?"
+                ].map((s) => (
                   <button
                     key={s}
-                    onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                    style={{
-                      padding: "8px 12px",
-                      background: "var(--color-surface-2)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "var(--radius-md)",
-                      color: "var(--color-text-2)",
-                      fontSize: 12,
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "var(--transition)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai)";
-                      (e.currentTarget as HTMLElement).style.color = "var(--color-text)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
-                      (e.currentTarget as HTMLElement).style.color = "var(--color-text-2)";
-                    }}
+                    onClick={() => setInput(s)}
+                    className="text-left w-full px-3 py-2 bg-[#202d33] border border-[#222d34] hover:border-purple-500/40 text-xs rounded-lg text-[#e9edef] transition-all truncate"
                   >
                     {s}
                   </button>
@@ -212,85 +121,33 @@ export default function AIPanel({ roomId, onClose }: AIPanelProps) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            style={{
-              display: "flex",
-              flexDirection: msg.role === "user" ? "row-reverse" : "row",
-              gap: 8,
-              animation: "fadeIn 0.2s ease",
-            }}
+            className={`flex gap-2.5 items-end ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
+            {msg.role !== "user" && (
+              <div className="w-7 h-7 rounded-full bg-purple-600/20 flex items-center justify-center text-xs shrink-0">
+                🤖
+              </div>
+            )}
             <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                flexShrink: 0,
-                background:
-                  msg.role === "user"
-                    ? "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))"
-                    : "linear-gradient(135deg, var(--color-ai), var(--color-ai-dark))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-              }}
+              className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-[13px] leading-relaxed shadow-sm ${
+                msg.role === "user"
+                  ? "bg-purple-600 text-white rounded-br-none"
+                  : "bg-[#202d33] border border-purple-500/15 text-[#e9edef] rounded-bl-none"
+              }`}
             >
-              {msg.role === "user" ? "👤" : "🤖"}
-            </div>
-            <div
-              style={{
-                maxWidth: "85%",
-                padding: "10px 14px",
-                borderRadius: msg.role === "user" ? "var(--radius-lg) var(--radius-lg) 4px var(--radius-lg)" : "var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px",
-                background:
-                  msg.role === "user"
-                    ? "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))"
-                    : "var(--color-surface-2)",
-                border: msg.role === "user" ? "none" : "1px solid var(--color-border)",
-                color: msg.role === "user" ? "white" : "var(--color-text)",
-                fontSize: 13,
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-              }}
-            >
-              {msg.content}
+              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
             </div>
           </div>
         ))}
 
-        {/* Loading indicator */}
         {loading && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center", animation: "fadeIn 0.2s ease" }}>
-            <div
-              style={{
-                width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                background: "linear-gradient(135deg, var(--color-ai), var(--color-ai-dark))",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
-              }}
-            >
+          <div className="flex gap-2.5 items-center justify-start text-[#8696a0]">
+            <div className="w-7 h-7 rounded-full bg-purple-600/20 flex items-center justify-center text-xs shrink-0">
               🤖
             </div>
-            <div
-              style={{
-                padding: "10px 16px",
-                background: "var(--color-surface-2)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-lg)",
-                borderBottomLeftRadius: 4,
-                display: "flex",
-                gap: 4,
-                alignItems: "center",
-              }}
-            >
-              {[0, 1, 2].map((i) => (
-                <span key={i} style={{
-                  width: 6, height: 6, borderRadius: "50%",
-                  background: "var(--color-ai)",
-                  display: "inline-block",
-                  animation: `pulse-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
-                }} />
-              ))}
+            <div className="flex items-center gap-1 bg-[#202d33] border border-[#222d34] px-4 py-2.5 rounded-full rounded-bl-none">
+              <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+              <span className="text-xs text-purple-300">FlowBot is typing...</span>
             </div>
           </div>
         )}
@@ -299,49 +156,29 @@ export default function AIPanel({ roomId, onClose }: AIPanelProps) {
       </div>
 
       {/* Input */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderTop: "1px solid var(--color-border)",
-          flexShrink: 0,
-        }}
-      >
-        {!roomId && (
-          <p style={{ fontSize: 12, color: "var(--color-text-3)", textAlign: "center", marginBottom: 8 }}>
-            Select a chat to enable FlowBot
-          </p>
-        )}
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-          <textarea
-            ref={textareaRef}
-            id="ai-panel-input"
-            className="input"
-            placeholder={roomId ? "Ask FlowBot... (Enter to send)" : "Select a chat first"}
+      <div className="p-3 bg-[#1e2a30] border-t border-[#222d34] shrink-0">
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={roomId ? "Ask FlowBot AI..." : "Select a room first"}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!roomId || loading}
-            rows={1}
-            style={{
-              resize: "none",
-              minHeight: 40,
-              maxHeight: 120,
-              overflowY: "auto",
-              lineHeight: 1.5,
-            }}
+            className="flex-1 bg-[#2a3942] text-[#e9edef] rounded-lg px-3 py-2 text-xs outline-none placeholder-[#8696a0]"
           />
           <button
-            id="ai-panel-send"
-            className="btn btn-ai"
             onClick={handleAsk}
             disabled={!roomId || !input.trim() || loading}
-            style={{ padding: "9px 14px", flexShrink: 0 }}
-            title="Ask FlowBot"
+            className="p-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 rounded-full text-white shrink-0 transition-all duration-200"
+            title="Ask"
           >
-            ✨
+            <Send className="w-4 h-4" />
           </button>
         </div>
       </div>
+
     </div>
   );
 }

@@ -203,6 +203,50 @@ export default function Login({ onAuth }: LoginProps) {
           </button>
         </form>
 
+        {/* Guest Demo Credentials */}
+        {!isRegister && (
+          <div style={{
+            marginTop: 20,
+            padding: "12px 14px",
+            background: "rgba(255,255,255,0.02)",
+            border: "1px dashed rgba(255,255,255,0.1)",
+            borderRadius: "var(--radius-md)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}>
+            <p style={{ color: "var(--color-text-2)", fontSize: 11, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0, fontWeight: 500 }}>
+              ⚡ Quick Demo Login
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                id="demo-guest-1"
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEmail("abcdef@gmai.com");
+                  setPassword("Ambrt@2345");
+                }}
+                style={{ flex: 1, padding: "8px", fontSize: 12 }}
+              >
+                👤 Guest 1
+              </button>
+              <button
+                id="demo-guest-2"
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEmail("docker@gmai.com");
+                  setPassword("fucj@2378");
+                }}
+                style={{ flex: 1, padding: "8px", fontSize: 12 }}
+              >
+                👤 Guest 2
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{
           marginTop: 24, textAlign: "center",
           borderTop: "1px solid var(--color-border)",

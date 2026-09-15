@@ -23,7 +23,7 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = userRepo().create({ name, email, passwordHash });
+  const user = userRepo().create({ name,   email, passwordHash });
   await userRepo().save(user);
 
   const accessToken = generateAccessToken(user.id, user.role);

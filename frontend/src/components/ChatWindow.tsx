@@ -9,6 +9,18 @@ import MessageBubble from "./MessageBubble";
 import VideoCallModal from "./VideoCallModal";
 import TypingIndicator from "./TypingIndicator";
 import AIPanel from "./AIPanel";
+import { 
+  Phone, 
+  Video, 
+  Bot, 
+  Search, 
+  MoreVertical, 
+  Paperclip, 
+  Smile, 
+  Send,
+  ArrowLeft,
+  MessageSquare
+} from "lucide-react";
 
 interface ChatWindowProps {
   user: User;
@@ -69,7 +81,6 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
       if (userId === user.id) return;
       setTypingUsers((prev) => new Set([...prev, userId]));
 
-      // Clear typing after 2.5s of no updates
       const existing = typingTimersRef.current.get(userId);
       if (existing) clearTimeout(existing);
       const timer = setTimeout(() => {
@@ -127,7 +138,7 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
   // ── SELECT ROOM ─────────────────────────────────────────────────────────
   const handleSelectRoom = (r: Room) => {
     setRoom(r);
-    setShowMobileList(false); // On mobile, hide the list when a room is selected
+    setShowMobileList(false);
   };
 
   const getRoomDisplayName = () => {
@@ -138,155 +149,87 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
 
   const otherUserId = room?.members?.find((m) => m !== user.id);
 
-  // ── RENDER ───────────────────────────────────────────────────────────────
   return (
-    <div className="app-shell">
-      {/* ── SIDEBAR (Chat List) ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          // Mobile: show/hide based on state
-          display: "flex",
-        }}
-        className="sidebar-wrapper"
-      >
+    <div className="flex h-screen w-screen bg-[#0b141a] text-[#e9edef] overflow-hidden select-none">
+      
+      {/* Sidebar Wrapper */}
+      <div className={`shrink-0 md:flex z-20 ${showMobileList ? "flex w-full md:w-auto" : "hidden md:flex"}`}>
         <ChatList
           currentUser={user}
           selectedRoom={room}
           onSelectRoom={handleSelectRoom}
           onLogout={onLogout}
+          onToggleAI={() => setShowAI(!showAI)}
+          showAI={showAI}
         />
       </div>
 
-      {/* ── MAIN CHAT AREA ── */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          minWidth: 0,
-          background: "var(--color-bg)",
-          backgroundImage: "radial-gradient(ellipse at 80% 20%, rgba(108,99,255,0.04) 0%, transparent 50%)",
-        }}
-      >
+      {/* Main chat window container */}
+      <div className={`flex-1 flex flex-col min-w-0 h-full relative z-10 ${!showMobileList ? "flex" : "hidden md:flex"}`}>
         {room ? (
           <>
             {/* Chat header */}
-            <div
-              style={{
-                padding: "14px 20px",
-                borderBottom: "1px solid var(--color-border)",
-                background: "var(--color-surface)",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                flexShrink: 0,
-              }}
-            >
-              {/* Mobile back button */}
-              <button
-                id="mobile-back-btn"
-                className="btn-icon"
-                onClick={() => setShowMobileList(true)}
-                style={{ display: "none" }}
-                title="Back to chats"
-              >
-                ←
-              </button>
-
-              {/* Room avatar */}
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: room.isPrivate
-                    ? "linear-gradient(135deg, var(--color-primary), var(--color-accent))"
-                    : "linear-gradient(135deg, var(--color-success), #06b6d4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 700,
-                  fontSize: 16,
-                  color: "white",
-                  flexShrink: 0,
-                }}
-              >
-                {room.isPrivate ? getRoomDisplayName()[0]?.toUpperCase() : "👥"}
-              </div>
-
-              <div style={{ flex: 1, overflow: "hidden" }}>
-                <p style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--color-text)" }}>
-                  {getRoomDisplayName()}
-                </p>
-                <p style={{ fontSize: 11, color: "var(--color-text-3)" }}>
-                  {typingUsers.size > 0 ? (
-                    <span style={{ color: "var(--color-primary)" }}>typing...</span>
-                  ) : (
-                    `${room.members?.length || 0} members`
-                  )}
-                </p>
-              </div>
-
-              {/* Action buttons */}
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <div className="h-[60px] px-4 flex items-center justify-between bg-[#202d33] border-b border-[#222d34] shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <button
-                  id="ai-toggle-btn"
-                  className="btn-icon"
-                  onClick={() => setShowAI(!showAI)}
-                  title="FlowBot AI"
-                  style={{
-                    fontSize: 18,
-                    background: showAI ? "rgba(168,85,247,0.15)" : "transparent",
-                    color: showAI ? "var(--color-ai)" : "var(--color-text-2)",
-                    borderRadius: "var(--radius-md)",
-                  }}
+                  onClick={() => setShowMobileList(true)}
+                  className="p-1.5 rounded-full hover:bg-[#2d3f4b] transition-all md:hidden text-[#aebac1]"
+                  title="Back"
                 >
-                  🤖
+                  <ArrowLeft className="w-5 h-5" />
                 </button>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white uppercase text-base bg-gradient-to-tr from-[#005c4b] to-[#00a884] shrink-0 shadow-sm">
+                  {getRoomDisplayName()[0]}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold truncate text-[#e9edef] leading-tight">
+                    {getRoomDisplayName()}
+                  </h2>
+                  <p className="text-[11px] text-[#8696a0] mt-0.5 truncate leading-none">
+                    {typingUsers.size > 0 ? (
+                      <span className="text-[#00a884] font-medium">typing...</span>
+                    ) : (
+                      "online"
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
                 {room.isPrivate && otherUserId && (
                   <button
-                    id="video-call-btn"
-                    className="btn-icon"
                     onClick={() => setShowCall(true)}
+                    className="p-2 rounded-full text-[#aebac1] hover:bg-[#2d3f4b] transition-all duration-200"
                     title="Video Call"
-                    style={{ fontSize: 18 }}
                   >
-                    📞
+                    <Video className="w-5 h-5" />
                   </button>
                 )}
+                <button
+                  onClick={() => setShowAI(!showAI)}
+                  className={`p-2 rounded-full transition-all duration-200 hover:bg-[#2d3f4b] ${
+                    showAI ? "text-purple-400 bg-purple-500/10" : "text-[#aebac1]"
+                  }`}
+                  title="FlowBot AI Assistant"
+                >
+                  <Bot className="w-5 h-5" />
+                </button>
+                <button className="p-2 rounded-full text-[#aebac1] hover:bg-[#2d3f4b]" title="Search">
+                  <Search className="w-5 h-5" />
+                </button>
+                <button className="p-2 rounded-full text-[#aebac1] hover:bg-[#2d3f4b]" title="Menu">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            {/* Messages */}
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "20px 20px 10px",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {messages.length === 0 && (
-                <div
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--color-text-3)",
-                    textAlign: "center",
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ fontSize: 48, opacity: 0.4 }}>💬</div>
-                  <p style={{ fontSize: 14, color: "var(--color-text-2)" }}>No messages yet</p>
-                  <p style={{ fontSize: 12 }}>Send the first message to get the conversation going!</p>
-                </div>
-              )}
+            {/* Message Wallpaper Area */}
+            <div className="flex-1 overflow-y-auto chat-wallpaper p-4 space-y-2 flex flex-col justify-start">
+              <div className="flex justify-center my-3 select-none">
+                <span className="bg-[#182229] border border-[#222d34] text-[#8696a0] text-[10.5px] px-2.5 py-1 rounded-md uppercase font-light tracking-wide shadow-sm">
+                  Messages are end-to-end encrypted
+                </span>
+              </div>
 
               {messages.map((m) => (
                 <MessageBubble
@@ -297,7 +240,7 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
                 />
               ))}
 
-              {/* Typing indicators */}
+              {/* Typing Indicators */}
               {Array.from(typingUsers).map((uid) => (
                 <TypingIndicator key={uid} userId={uid} />
               ))}
@@ -305,109 +248,76 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message input */}
-            <div
-              style={{
-                padding: "12px 20px",
-                borderTop: "1px solid var(--color-border)",
-                background: "var(--color-surface)",
-                display: "flex",
-                gap: 10,
-                alignItems: "center",
-                flexShrink: 0,
-              }}
-            >
+            {/* Input Bar */}
+            <div className="h-[62px] px-4 flex items-center gap-3 bg-[#202d33] border-t border-[#222d34] shrink-0">
+              <div className="flex items-center gap-2 text-[#aebac1]">
+                <button className="p-2 hover:bg-[#2d3f4b] rounded-full transition-all duration-150">
+                  <Smile className="w-6 h-6" />
+                </button>
+                <button className="p-2 hover:bg-[#2d3f4b] rounded-full transition-all duration-150">
+                  <Paperclip className="w-5 h-5" />
+                </button>
+              </div>
+
               <input
                 ref={inputRef}
-                id="message-input"
-                className="input"
                 type="text"
-                placeholder={`Message ${getRoomDisplayName()}...`}
+                placeholder="Type a message"
                 value={text}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                style={{ fontSize: 14 }}
+                className="flex-1 bg-[#2a3942] text-[#e9edef] rounded-lg px-4 py-2 text-sm outline-none placeholder-[#8696a0]"
               />
+
               <button
-                id="send-message-btn"
-                className="btn btn-primary"
                 onClick={sendMessage}
                 disabled={!text.trim()}
-                style={{ padding: "9px 18px", flexShrink: 0 }}
+                className={`p-2.5 rounded-full text-white transition-all duration-200 shrink-0 ${
+                  text.trim()
+                    ? "bg-[#00a884] hover:bg-[#008f72] shadow-sm active:scale-95"
+                    : "text-[#aebac1] hover:bg-[#2d3f4b]"
+                }`}
               >
-                <span>Send</span>
-                <span>↑</span>
+                {text.trim() ? (
+                  <Send className="w-5 h-5 text-[#111b21]" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </button>
             </div>
           </>
         ) : (
-          /* Empty state */
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-3)",
-              textAlign: "center",
-              padding: 40,
-              gap: 16,
-            }}
-          >
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,229,255,0.1))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 36,
-                marginBottom: 8,
-              }}
-            >
-              💬
-            </div>
-            <div>
-              <h2
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  marginBottom: 8,
-                }}
-              >
-                Welcome to FlowTalk
+          /* Empty Chat state (WhatsApp Style) */
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#222e35] select-none border-l border-[#222d34]/60">
+            <div className="max-w-[460px] text-center px-6">
+              <div className="w-[180px] h-[180px] bg-[#1f2c34] rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner relative">
+                <MessageSquare className="w-24 h-24 text-[#00a884]/30" />
+                <Bot className="w-12 h-12 text-[#a855f7]/30 absolute bottom-6 right-6" />
+              </div>
+              <h2 className="text-2xl font-light text-[#e9edef] mb-3">
+                FlowTalk for Web
               </h2>
-              <p style={{ fontSize: 14, color: "var(--color-text-2)", maxWidth: 280 }}>
-                Select a conversation or start a new one using the ✏️ button
+              <p className="text-sm text-[#8696a0] leading-relaxed mb-6 font-normal">
+                Send and receive messages instantly. Select any chat from the sidebar or click the edit icon to search for new users to start a conversation.
               </p>
+              <div className="flex items-center justify-center gap-2 text-xs text-[#667781] border-t border-[#3b4a54] pt-6 font-light">
+                <span>🔒 End-to-end encrypted</span>
+                <span>·</span>
+                <span>✨ Built-in Groq AI assistant</span>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── AI PANEL ── */}
+      {/* AI Assistant Sidebar (slides in next to the chat screen) */}
       {showAI && (
-        <div
-          style={{
-            width: "var(--ai-panel-width)",
-            minWidth: "var(--ai-panel-width)",
-            height: "100dvh",
-            flexShrink: 0,
-          }}
-        >
+        <div className="w-[360px] shrink-0 border-l border-[#222d34] h-full z-15">
           <AIPanel roomId={room?.id || null} onClose={() => setShowAI(false)} />
         </div>
       )}
 
-      {/* ── VIDEO CALL ── */}
+      {/* Video call modal */}
       {showCall && room && otherUserId && (
         <VideoCallModal
           room={room}
@@ -416,33 +326,6 @@ export default function ChatWindow({ user, onLogout }: ChatWindowProps) {
           onClose={() => setShowCall(false)}
         />
       )}
-
-      {/* Mobile responsive styles */}
-      <style>{`
-        @media (max-width: 768px) {
-          .sidebar-wrapper {
-            position: fixed !important;
-            left: ${showMobileList ? "0" : "-100%"} !important;
-            top: 0 !important;
-            width: 100vw !important;
-            height: 100dvh !important;
-            z-index: 50 !important;
-            transition: left 0.3s cubic-bezier(0.4,0,0.2,1) !important;
-          }
-          .sidebar-wrapper > div {
-            width: 100% !important;
-            min-width: 100% !important;
-          }
-          #mobile-back-btn {
-            display: flex !important;
-          }
-        }
-        @media (max-width: 1024px) {
-          :root {
-            --ai-panel-width: 260px;
-          }
-        }
-      `}</style>
     </div>
   );
 }

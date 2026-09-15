@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { getMyRooms } from "@/services/roomService";
 import { socket } from "@/lib/socket";
 import { Room, User } from "@/types";
 import UserSearch from "./UserSearch";
+import { 
+  MessageSquarePlus, 
+  LogOut, 
+  Search, 
+  Bot, 
+  Sparkles, 
+  Check, 
+  CheckCheck,
+  User as UserIcon,
+  CircleDot
+} from "lucide-react";
 
 interface ChatListProps {
   currentUser: User;
   selectedRoom: Room | null;
   onSelectRoom: (room: Room) => void;
   onLogout: () => void;
+  onToggleAI: () => void;
+  showAI: boolean;
 }
 
 function formatTime(dateStr?: string): string {
@@ -25,12 +38,20 @@ function formatTime(dateStr?: string): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export default function ChatList({ currentUser, selectedRoom, onSelectRoom, onLogout }: ChatListProps) {
+export default function ChatList({ 
+  currentUser, 
+  selectedRoom, 
+  onSelectRoom, 
+  onLogout,
+  onToggleAI,
+  showAI
+}: ChatListProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const [onlineMap, setOnlineMap] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [typingMap, setTypingMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     getMyRooms()
@@ -46,21 +67,42 @@ export default function ChatList({ currentUser, selectedRoom, onSelectRoom, onLo
     const handlePresence = ({ userId, status }: { userId: string; status: string }) => {
       setOnlineMap((prev) => ({ ...prev, [userId]: status === "online" }));
     };
+    
     const handleNewMsg = (msg: any) => {
-      setRooms((prev) =>
-        prev
-          .map((r) => (r.id === msg.roomId ? { ...r, lastMessageAt: msg.createdAt } : r))
-          .sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime())
-      );
+      setRooms((prev) => {
+        const index = prev.findIndex((r) => r.id === msg.roomId);
+        if (index === -1) return prev;
+        
+        const updated = [...prev];
+        updated[index] = { 
+          ...updated[index], 
+          lastMessagePreview: msg.content,
+          lastMessageAt: msg.createdAt 
+        };
+        return updated.sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
+      });
+    };
+
+    const handleTyping = ({ room: roomId, userId }: { room: string; userId: string }) => {
+      if (userId === currentUser.id) return;
+      setTypingMap((prev) => ({ ...prev, [roomId]: true }));
+      
+      const timer = setTimeout(() => {
+        setTypingMap((prev) => ({ ...prev, [roomId]: false }));
+      }, 2500);
+      return () => clearTimeout(timer);
     };
 
     socket.on("presence:update" as any, handlePresence);
     socket.on("message:new" as any, handleNewMsg);
+    socket.on("typing" as any, handleTyping);
+    
     return () => {
       socket.off("presence:update" as any, handlePresence);
       socket.off("message:new" as any, handleNewMsg);
+      socket.off("typing" as any, handleTyping);
     };
-  }, []);
+  }, [currentUser.id]);
 
   const handleRoomAdded = (room: Room) => {
     setRooms((prev) => {
@@ -81,142 +123,79 @@ export default function ChatList({ currentUser, selectedRoom, onSelectRoom, onLo
     return room.name || "Group Chat";
   };
 
-  const getRoomInitial = (room: Room) => getRoomName(room)[0]?.toUpperCase() || "?";
-
   const getOtherUserId = (room: Room) =>
     room.members?.find((m) => m !== currentUser.id);
 
   return (
     <>
-      <div
-        style={{
-          width: "var(--sidebar-width)",
-          minWidth: "var(--sidebar-width)",
-          height: "100dvh",
-          display: "flex",
-          flexDirection: "column",
-          background: "var(--color-surface)",
-          borderRight: "1px solid var(--color-border)",
-          overflow: "hidden",
-        }}
-      >
+      <div className="w-[380px] min-w-[380px] h-screen flex flex-col bg-[#111b21] border-r border-[#222d34] select-none">
         {/* Header */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--color-border)",
-            background: "linear-gradient(180deg, rgba(108,99,255,0.04) 0%, transparent 100%)",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* User avatar */}
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "white",
-                  flexShrink: 0,
-                }}
-              >
-                {currentUser.name[0].toUpperCase()}
+        <div className="h-[60px] px-4 flex items-center justify-between bg-[#202d33] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white text-base shadow-sm uppercase">
+                {currentUser.name[0]}
               </div>
-              <div>
-                <p style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--color-text)" }}>
-                  {currentUser.name}
-                </p>
-                <p style={{ fontSize: 11, color: "var(--color-online)", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-online)", display: "inline-block" }} />
-                  Online
-                </p>
-              </div>
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#00a884] border-2 border-[#202d33] rounded-full" />
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                id="new-chat-btn"
-                className="btn-icon"
-                onClick={() => setShowSearch(true)}
-                title="New Chat"
-                style={{ fontSize: 18 }}
-              >
-                ✏️
-              </button>
-              <button
-                id="logout-btn"
-                className="btn-icon"
-                onClick={onLogout}
-                title="Logout"
-                style={{ fontSize: 16 }}
-              >
-                🚪
-              </button>
+            <div className="hidden sm:block">
+              <p className="text-sm font-medium text-[#e9edef] leading-tight truncate max-w-[120px]">
+                {currentUser.name}
+              </p>
+              <p className="text-[11px] text-[#00a884]">My Profile</p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onToggleAI}
+              className={`p-2 rounded-full transition-all duration-200 hover:bg-[#2d3f4b] relative ${showAI ? 'text-purple-400 bg-purple-500/10' : 'text-[#aebac1]'}`}
+              title="FlowBot AI Assistant"
+            >
+              <Bot className="w-5 h-5" />
+              <Sparkles className="w-2.5 h-2.5 absolute top-1 right-1 text-purple-400" />
+            </button>
+            <button
+              onClick={() => setShowSearch(true)}
+              className="p-2 rounded-full text-[#aebac1] hover:bg-[#2d3f4b] transition-all duration-200"
+              title="Start New Chat"
+            >
+              <MessageSquarePlus className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-full text-[#aebac1] hover:bg-[#2d3f4b] transition-all duration-200"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-          {/* Search bar */}
-          <div style={{ position: "relative" }}>
-            <span style={{
-              position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)",
-              color: "var(--color-text-3)", fontSize: 14, pointerEvents: "none",
-            }}>🔍</span>
+        {/* Search / Filter Section */}
+        <div className="p-2 bg-[#111b21] border-b border-[#222d34] shrink-0">
+          <div className="relative flex items-center bg-[#202d33] rounded-lg px-3 py-1.5">
+            <Search className="w-4 h-4 text-[#8696a0] mr-3" />
             <input
-              id="chat-list-search"
-              className="input"
               type="text"
-              placeholder="Search chats..."
+              placeholder="Search or start new chat"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: 36, fontSize: 13, padding: "8px 12px 8px 34px" }}
+              className="w-full bg-transparent text-sm text-[#e9edef] outline-none placeholder-[#8696a0]"
             />
           </div>
         </div>
 
-        {/* App brand */}
-        <div
-          style={{
-            padding: "10px 20px 6px",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span style={{ fontSize: 16 }}>💬</span>
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 13,
-              fontWeight: 700,
-              background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            FlowTalk
-          </span>
-          <span style={{ color: "var(--color-text-3)", fontSize: 11, marginLeft: "auto" }}>
-            {rooms.length} chat{rooms.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {/* Room list */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+        {/* Chat List */}
+        <div className="flex-1 overflow-y-auto bg-[#111b21]">
           {loading && (
-            <div style={{ padding: "8px 12px" }}>
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "12px", alignItems: "center" }}>
-                  <div className="skeleton" style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div className="skeleton" style={{ width: "55%", height: 14, marginBottom: 7 }} />
-                    <div className="skeleton" style={{ width: "80%", height: 11 }} />
+            <div>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex gap-3 px-4 py-3 items-center border-b border-[#222d34]/40">
+                  <div className="w-12 h-12 rounded-full bg-[#202d33] animate-pulse shrink-0" />
+                  <div className="flex-1">
+                    <div className="w-24 h-3.5 bg-[#202d33] rounded animate-pulse mb-2" />
+                    <div className="w-48 h-2.5 bg-[#202d33] rounded animate-pulse" />
                   </div>
                 </div>
               ))}
@@ -224,18 +203,20 @@ export default function ChatList({ currentUser, selectedRoom, onSelectRoom, onLo
           )}
 
           {!loading && filteredRooms.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--color-text-3)" }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-2)", marginBottom: 6 }}>
-                {searchQuery ? "No chats match" : "No chats yet"}
+            <div className="flex flex-col items-center justify-center p-8 text-center h-[300px]">
+              <CircleDot className="w-12 h-12 text-[#667781] mb-3 animate-pulse" />
+              <p className="text-[#e9edef] text-sm font-medium mb-1">
+                {searchQuery ? "No matches found" : "No chats yet"}
+              </p>
+              <p className="text-[#8696a0] text-xs max-w-[200px] mb-4">
+                {searchQuery ? "Try searching for a different user name or email." : "Start a private conversation with another user."}
               </p>
               {!searchQuery && (
                 <button
-                  className="btn btn-primary"
                   onClick={() => setShowSearch(true)}
-                  style={{ marginTop: 8, fontSize: 13 }}
+                  className="px-4 py-2 bg-[#00a884] hover:bg-[#008f72] text-[#111b21] font-semibold text-xs rounded-full transition-all duration-200 shadow-sm"
                 >
-                  ✏️ Start a chat
+                  Find Users
                 </button>
               )}
             </div>
@@ -246,106 +227,58 @@ export default function ChatList({ currentUser, selectedRoom, onSelectRoom, onLo
             const otherId = getOtherUserId(room);
             const isOnline = otherId ? (onlineMap[otherId] ?? false) : false;
             const roomName = getRoomName(room);
-            const initial = getRoomInitial(room);
+            const isTyping = typingMap[room.id];
 
             return (
-              <button
+              <div
                 key={room.id}
-                id={`room-item-${room.id}`}
                 onClick={() => onSelectRoom(room)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 16px",
-                  background: isSelected
-                    ? "linear-gradient(135deg, rgba(108,99,255,0.15), rgba(108,99,255,0.08))"
-                    : "transparent",
-                  border: "none",
-                  borderLeft: isSelected ? "3px solid var(--color-primary)" : "3px solid transparent",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  color: "var(--color-text)",
-                  transition: "var(--transition)",
-                  position: "relative",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--color-surface-2)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent";
-                }}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-150 border-b border-[#222d34]/40 select-none ${
+                  isSelected ? "bg-[#2a3942]" : "hover:bg-[#202d33]"
+                }`}
               >
                 {/* Avatar */}
-                <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      background: room.isPrivate
-                        ? "linear-gradient(135deg, var(--color-primary), var(--color-accent))"
-                        : "linear-gradient(135deg, var(--color-success), #06b6d4)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 17,
-                      fontWeight: 700,
-                      color: "white",
-                      boxShadow: isSelected ? "var(--shadow-primary)" : "none",
-                      transition: "var(--transition)",
-                    }}
-                  >
-                    {room.isPrivate ? initial : "👥"}
+                <div className="relative shrink-0">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base uppercase ${
+                    room.isPrivate ? "bg-gradient-to-tr from-[#005c4b] to-[#00a884]" : "bg-gradient-to-tr from-purple-700 to-indigo-600"
+                  }`}>
+                    {room.isPrivate ? roomName[0] : "GP"}
                   </div>
                   {room.isPrivate && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 1,
-                        right: 1,
-                        width: 11,
-                        height: 11,
-                        borderRadius: "50%",
-                        background: isOnline ? "var(--color-online)" : "var(--color-offline)",
-                        border: "2px solid var(--color-surface)",
-                        transition: "var(--transition)",
-                      }}
-                    />
+                    <span className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-[#111b21] ${
+                      isOnline ? "bg-[#00a884]" : "bg-[#8696a0]"
+                    }`} />
                   )}
                 </div>
 
-                {/* Info */}
-                <div style={{ flex: 1, overflow: "hidden" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                    <p
-                      style={{
-                        fontWeight: isSelected ? 600 : 500,
-                        fontSize: 14,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        color: isSelected ? "var(--color-primary)" : "var(--color-text)",
-                      }}
-                    >
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className={`text-sm truncate leading-snug ${
+                      isSelected ? "text-[#e9edef] font-semibold" : "text-[#e9edef] font-medium"
+                    }`}>
                       {roomName}
-                    </p>
-                    <span style={{ color: "var(--color-text-3)", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>
+                    </h3>
+                    <span className="text-[11px] text-[#8696a0] shrink-0 font-light">
                       {formatTime(room.lastMessageAt)}
                     </span>
                   </div>
-                  <p style={{
-                    color: "var(--color-text-3)",
-                    fontSize: 12,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}>
-                    {isOnline && room.isPrivate ? "● Online" : "No messages yet"}
-                  </p>
+
+                  <div className="flex items-center justify-between">
+                    {isTyping ? (
+                      <span className="text-xs text-[#00a884] font-medium animate-pulse">typing...</span>
+                    ) : (
+                      <p className="text-xs text-[#8696a0] truncate max-w-[200px] font-normal leading-normal">
+                        {room.lastMessagePreview || "No messages yet"}
+                      </p>
+                    )}
+                    
+                    {room.lastMessagePreview && isSelected && (
+                      <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] shrink-0 ml-1.5" />
+                    )}
+                  </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

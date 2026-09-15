@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { socket } from "@/lib/socket";
 import { Room, User } from "@/types";
+import { Mic, MicOff, Video as Cam, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 
 interface VideoCallModalProps {
   room: Room;
@@ -85,7 +86,6 @@ export default function VideoCallModal({ room, user, otherUserId, onClose }: Vid
         }
       };
 
-      // Notify other user
       socket.emit("call:request" as any, { toUserId: otherUserId, fromUser: user.id, room: room.id });
 
       const offer = await pc.current.createOffer();
@@ -119,179 +119,99 @@ export default function VideoCallModal({ room, user, otherUserId, onClose }: Vid
     onClose();
   };
 
-  const btnStyle = (active: boolean, danger = false): React.CSSProperties => ({
-    width: 48,
-    height: 48,
-    borderRadius: "50%",
-    border: "none",
-    cursor: "pointer",
-    fontSize: 20,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s ease",
-    background: danger
-      ? "var(--color-danger)"
-      : active
-      ? "rgba(255,255,255,0.1)"
-      : "rgba(255,255,255,0.2)",
-    boxShadow: danger ? "0 4px 16px rgba(244,63,94,0.4)" : "none",
-  });
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(10px)",
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        animation: "fadeIn 0.25s ease",
-      }}
-    >
-      <div
-        style={{
-          background: "#0a0c12",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "var(--radius-xl)",
-          overflow: "hidden",
-          boxShadow: "0 30px 80px rgba(0,0,0,0.8)",
-          width: "100%",
-          maxWidth: 700,
-          animation: "scaleIn 0.3s cubic-bezier(0.4,0,0.2,1)",
-        }}
-      >
+    <div className="fixed inset-0 bg-[#0b141a]/95 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+      <div className="w-full max-w-[680px] bg-[#111b21] border border-[#222d34] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        
         {/* Header */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "white", fontSize: 16 }}>
-              📞 Video Call
-            </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
-              {callStatus === "connecting" ? "Connecting..." : callStatus === "connected" ? "● Connected" : "⚠️ Connection failed"}
+        <div className="px-5 py-4 border-b border-[#222d34] flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-sm text-[#e9edef] tracking-wide">
+              FlowTalk Video Call
+            </h3>
+            <p className="text-[10px] text-[#8696a0] mt-0.5 uppercase tracking-wider font-semibold">
+              {callStatus === "connecting" ? "Connecting..." : callStatus === "connected" ? "● Live Call" : "⚠️ Disconnected"}
             </p>
           </div>
         </div>
 
-        {/* Video grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 12,
-            padding: 16,
-            background: "#050608",
-          }}
-        >
-          {/* Local video */}
-          <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", aspectRatio: "16/9", background: "#111" }}>
+        {/* Video Screens */}
+        <div className="grid grid-cols-2 gap-3 p-4 bg-[#0b141a] relative min-h-[300px]">
+          
+          {/* Local Camera */}
+          <div className="relative rounded-xl overflow-hidden bg-[#111b21] aspect-video border border-[#222d34]">
             <video
               ref={localVideo}
               autoPlay
               muted
               playsInline
-              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }}
+              className="w-full h-full object-cover scale-x-[-1]"
             />
             {isCamOff && (
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "#111", fontSize: 36, color: "rgba(255,255,255,0.3)",
-              }}>📷</div>
+              <div className="absolute inset-0 flex items-center justify-center bg-[#111b21]">
+                <Cam className="w-12 h-12 text-[#8696a0]/30" />
+              </div>
             )}
-            <div style={{
-              position: "absolute", bottom: 8, left: 10,
-              background: "rgba(0,0,0,0.5)", borderRadius: "var(--radius-sm)",
-              padding: "3px 8px", fontSize: 11, color: "white",
-            }}>
+            <span className="absolute bottom-2.5 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded font-light">
               You
-            </div>
+            </span>
           </div>
 
-          {/* Remote video */}
-          <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", aspectRatio: "16/9", background: "#111" }}>
+          {/* Remote Camera */}
+          <div className="relative rounded-xl overflow-hidden bg-[#111b21] aspect-video border border-[#222d34]">
             <video
               ref={remoteVideo}
               autoPlay
               playsInline
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              className="w-full h-full object-cover"
             />
             {callStatus === "connecting" && (
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                gap: 8, background: "#111",
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
-                  border: "3px solid rgba(255,255,255,0.1)",
-                  borderTopColor: "var(--color-primary)",
-                  animation: "spin 1s linear infinite",
-                }} />
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Waiting for connection...</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#111b21] gap-3">
+                <Loader2 className="w-8 h-8 text-[#00a884] animate-spin" />
+                <p className="text-[11px] text-[#8696a0] tracking-wider uppercase font-semibold">
+                  Waiting for reply...
+                </p>
               </div>
             )}
-            <div style={{
-              position: "absolute", bottom: 8, left: 10,
-              background: "rgba(0,0,0,0.5)", borderRadius: "var(--radius-sm)",
-              padding: "3px 8px", fontSize: 11, color: "white",
-            }}>
-              Remote
-            </div>
+            <span className="absolute bottom-2.5 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded font-light">
+              Contact
+            </span>
           </div>
+
         </div>
 
-        {/* Controls */}
-        <div
-          style={{
-            padding: "16px 20px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
-            background: "#0a0c12",
-          }}
-        >
+        {/* Call Controls panel */}
+        <div className="py-5 bg-[#202d33] border-t border-[#222d34] flex items-center justify-center gap-5">
           <button
-            id="call-toggle-mute"
             onClick={toggleMute}
-            style={btnStyle(isMuted)}
+            className={`p-3.5 rounded-full transition-all duration-200 ${
+              isMuted ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-[#2d3f4b] hover:bg-[#3d5363] text-[#e9edef]"
+            }`}
             title={isMuted ? "Unmute" : "Mute"}
           >
-            {isMuted ? "🔇" : "🎤"}
+            {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
+          
           <button
-            id="call-toggle-camera"
-            onClick={toggleCamera}
-            style={btnStyle(isCamOff)}
-            title={isCamOff ? "Turn on camera" : "Turn off camera"}
-          >
-            {isCamOff ? "📷" : "📹"}
-          </button>
-          <button
-            id="call-end-btn"
             onClick={handleEndCall}
-            style={btnStyle(false, true)}
-            title="End call"
+            className="p-4 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/25 active:scale-95 transition-all"
+            title="End Call"
           >
-            📵
+            <PhoneOff className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            className={`p-3.5 rounded-full transition-all duration-200 ${
+              isCamOff ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" : "bg-[#2d3f4b] hover:bg-[#3d5363] text-[#e9edef]"
+            }`}
+            title={isCamOff ? "Turn Cam On" : "Turn Cam Off"}
+          >
+            {isCamOff ? <Cam className="w-5 h-5" /> : <Cam className="w-5 h-5" />}
           </button>
         </div>
-      </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Message } from "@/types";
+import { Check, CheckCheck } from "lucide-react";
 
 interface MessageBubbleProps {
   msg: Message;
@@ -9,17 +10,18 @@ interface MessageBubbleProps {
 }
 
 function formatTime(dateStr: string): string {
+  if (!dateStr) return "";
   return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function StatusTick({ status }: { status: string }) {
+function StatusTicks({ status }: { status: string }) {
   if (status === "read") {
-    return <span style={{ color: "var(--color-accent)", fontSize: 12 }}>✓✓</span>;
+    return <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />;
   }
   if (status === "delivered") {
-    return <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓✓</span>;
+    return <CheckCheck className="w-3.5 h-3.5 text-[#8696a0]" />;
   }
-  return <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>✓</span>;
+  return <Check className="w-3.5 h-3.5 text-[#8696a0]" />;
 }
 
 export default function MessageBubble({ msg, isMe, isBot = false }: MessageBubbleProps) {
@@ -28,55 +30,19 @@ export default function MessageBubble({ msg, isMe, isBot = false }: MessageBubbl
 
   if (isAI) {
     return (
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          marginBottom: 8,
-          animation: "fadeIn 0.25s ease",
-        }}
-      >
-        {/* Bot avatar */}
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--color-ai), var(--color-ai-dark))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 14,
-            flexShrink: 0,
-            boxShadow: "var(--shadow-ai)",
-            alignSelf: "flex-end",
-          }}
-        >
+      <div className="flex gap-2.5 items-end justify-start mb-2.5 animate-bubble max-w-[85%] sm:max-w-[70%]">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-sm shadow-md shrink-0 mb-1">
           🤖
         </div>
-
-        <div style={{ maxWidth: "72%" }}>
-          <div style={{ fontSize: 10, color: "var(--color-ai)", fontWeight: 600, marginBottom: 4, letterSpacing: "0.5px" }}>
-            FLOWBOT AI
-          </div>
-          <div
-            style={{
-              background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(108,99,255,0.08))",
-              border: "1px solid rgba(168,85,247,0.25)",
-              borderRadius: "var(--radius-lg)",
-              borderBottomLeftRadius: 4,
-              padding: "10px 14px",
-              color: "var(--color-text)",
-              fontSize: 13.5,
-              lineHeight: 1.65,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {content}
-          </div>
-          <div style={{ fontSize: 10, color: "var(--color-text-3)", marginTop: 4 }}>
-            {formatTime(msg.createdAt)}
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold text-purple-400 mb-1 ml-1.5 tracking-wider uppercase">
+            FlowBot AI
+          </span>
+          <div className="bg-[#1f1a30] border border-purple-500/20 text-[#e9edef] rounded-2xl rounded-tl-none px-3.5 py-2 text-[13.5px] leading-relaxed shadow-sm">
+            <p className="whitespace-pre-wrap break-words">{content}</p>
+            <div className="flex justify-end items-center gap-1 mt-1.5 text-[9px] text-purple-300/60 font-light">
+              <span>{formatTime(msg.createdAt)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -84,48 +50,22 @@ export default function MessageBubble({ msg, isMe, isBot = false }: MessageBubbl
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: isMe ? "flex-end" : "flex-start",
-        marginBottom: 6,
-        animation: "fadeIn 0.2s ease",
-      }}
-    >
-      <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-        <div
-          style={{
-            padding: "9px 14px",
-            borderRadius: isMe
-              ? "var(--radius-lg) var(--radius-lg) 4px var(--radius-lg)"
-              : "var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px",
-            background: isMe
-              ? "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))"
-              : "var(--color-surface-2)",
-            border: isMe ? "none" : "1px solid var(--color-border)",
-            color: isMe ? "white" : "var(--color-text)",
-            fontSize: 13.5,
-            lineHeight: 1.55,
-            wordBreak: "break-word",
-            boxShadow: isMe ? "0 2px 8px var(--color-primary-glow)" : "none",
-          }}
-        >
-          {content || <span style={{ opacity: 0.5, fontStyle: "italic" }}>No content</span>}
-        </div>
-
-        {/* Timestamp + status */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            marginTop: 3,
-            color: "var(--color-text-3)",
-            fontSize: 10,
-          }}
-        >
+    <div className={`flex w-full mb-2.5 animate-bubble ${isMe ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`relative max-w-[85%] sm:max-w-[70%] px-3 py-1.5 shadow-sm text-[13.5px] leading-relaxed ${
+          isMe
+            ? "bg-[#005c4b] text-[#e9edef] rounded-lg rounded-tr-none"
+            : "bg-[#202d33] text-[#e9edef] rounded-lg rounded-tl-none"
+        }`}
+      >
+        <p className="whitespace-pre-wrap break-words pr-12 pb-1.5">
+          {content}
+        </p>
+        
+        {/* Align Time & Status Info beautifully inside the bubble corner */}
+        <div className="absolute right-2 bottom-1 flex items-center gap-1 text-[10px] text-[#8696a0]/80 font-light select-none">
           <span>{formatTime(msg.createdAt)}</span>
-          {isMe && <StatusTick status={msg.deliveryStatus} />}
+          {isMe && <StatusTicks status={msg.deliveryStatus} />}
         </div>
       </div>
     </div>

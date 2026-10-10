@@ -1,6 +1,6 @@
-\node_modules
+node_modules/
 .env
-\.agents
-\.cursor
-\.github
+.agents/
+.cursor/
+.github/
 userAuthdata.txt

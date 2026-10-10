@@ -46,6 +46,6 @@ initSocket(server);
 // ─── START ─────────────────────────────────────────────────────────────────
 connectDB().then(() => {
   server.listen(env.PORT, () => {
-    console.log(`✅ FlowTalk server running on port ${env.PORT} [${env.NODE_ENV}]`);
+    console.log(`✅ FlowTalk server running on port ${env.PORT}`);
   });
 });
